@@ -286,7 +286,7 @@ function App() {
             </Route>
 
             {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/admin/login" replace />} />
+            <Route path="/" element={<Navigate to="/shop/login" replace />} />
           </Routes>
         </Router>
       </ShopAuthProvider>

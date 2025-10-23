@@ -66,21 +66,11 @@ const AdminLogin = () => {
 
       {/* RIGHT SIDE — LOGIN FORM */}
       <motion.div
-        className="flex-1 relative flex items-center justify-center bg-gradient-to-br from-yellow-50 to-white h-screen"
+        className="flex-1 flex items-center justify-center bg-gradient-to-br from-yellow-50 to-white h-screen"
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        {/* Small corner button to go to Shop Login */}
-        <div className="absolute right-4 top-4 z-20">
-          <Link
-            to="/shop/login"
-            className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full shadow-sm hover:bg-yellow-200 transition-colors duration-150 border border-yellow-200"
-            aria-label="Go to Shop Login"
-          >
-            Shop login
-          </Link>
-        </div>
         <motion.form
           onSubmit={handleSubmit}
           className="bg-white shadow-2xl rounded-2xl p-8 sm:p-10 w-80 sm:w-96 mx-4 sm:mx-0 transform hover:scale-[1.02] transition-transform duration-300 border border-yellow-100"
