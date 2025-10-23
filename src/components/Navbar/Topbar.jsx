@@ -34,10 +34,8 @@ const Topbar = () => {
   };
 
   return (
-    <div className="sticky top-0 z-50 flex justify-between items-center bg-gradient-to-r  from-blue-700 to-slate-600 shadow-md px-6 py-3">
-      <h2 className="text-xl font-semibold text-white drop-shadow-sm">
-        Welcome, {adminName}
-      </h2>
+    <div className="hidden lg:flex justify-between items-center bg-gradient-to-r from-blue-700 to-slate-600 shadow-md px-6 py-3 text-white sticky top-0 z-40">
+      <h2 className="text-xl font-semibold">Welcome, {adminName}</h2>
       <button
         onClick={handleLogout}
         className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 shadow-md transition-all duration-200 active:scale-95"

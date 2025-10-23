@@ -63,19 +63,24 @@ const AdminLayout = () => {
         </nav>
       </div>
 
-      {/* Mobile Hamburger */}
-      <div className="lg:hidden flex-1">
-        <div className="flex items-center justify-between bg-gradient-to-r from-slate-600 to-blue-700 text-white px-4 py-3 sticky top-0 z-50 shadow-md">
-          <div className="font-bold text-lg">ASP Tech</div>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 rounded hover:bg-yellow-500 transition"
-          >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
+      {/* Mobile Topbar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-gradient-to-r from-slate-600 to-blue-700 text-white flex items-center justify-between px-4 py-3 z-40 shadow-md">
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 rounded hover:bg-yellow-500 transition"
+        >
+          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+        <h1 className="text-lg font-semibold">ASP Tech</h1>
       </div>
 
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* Main Content */}
       <div className="flex-1 lg:ml-64 min-h-screen bg-gray-50"></div>
 
