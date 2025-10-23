@@ -71,7 +71,6 @@ const AdminLayout = () => {
         >
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <h1 className="text-lg font-semibold">ASP Tech</h1>
       </div>
 
       {/* Overlay for mobile */}
