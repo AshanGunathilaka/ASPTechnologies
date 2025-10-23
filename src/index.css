@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+
+body {
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Smooth page fade-in */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+form {
+    animation: fadeIn 0.6s ease forwards;
+}
+
+/* Mobile responsive tweaks */
+@media (max-width: 768px) {
+    .flex-col.md\\:flex-row {
+        flex-direction: column !important;
+    }
+
+    img {
+        width: 180px !important;
+    }
+
+    form {
+        width: 90% !important;
+    }
+}
+
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.sidebar-scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.sidebar-scrollbar-hide {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+
+/* Hide scrollbar but allow scrolling */
+body {
+    overflow-y: scroll;
+    /* ensures consistent layout */
+}
+
+/* Hide the scrollbar visually */
+body::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+    /* optional */
+}
+
+/* Optional: Hide sidebar scrollbar also (if not already) */
+.sidebar-scrollbar-hide::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
