@@ -2,9 +2,29 @@ import React, { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import Topbar from "./Topbar";
+import { useAuth } from "../../context/AuthContext";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout } = useAuth();
+  const MySwal = withReactContent(Swal);
+
+  const handleLogout = () => {
+    MySwal.fire({
+      title: "Are you sure?",
+      text: "Do you want to logout?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#9ca3af",
+      confirmButtonText: "Yes, Logout",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (result.isConfirmed) logout();
+    });
+  };
 
   const menuItems = [
     { name: "Dashboard", path: "/admin/dashboard" },
@@ -65,12 +85,25 @@ const AdminLayout = () => {
 
       {/* Mobile Topbar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-gradient-to-r from-slate-600 to-blue-700 text-white flex items-center justify-between px-4 py-3 z-40 shadow-md">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded hover:bg-yellow-500 transition"
-        >
-          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded hover:bg-yellow-500 transition"
+            aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+          >
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <div className="font-bold text-lg">ASP Tech</div>
+        </div>
+        <div>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-md shadow"
+            aria-label="Logout"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Overlay for mobile */}
