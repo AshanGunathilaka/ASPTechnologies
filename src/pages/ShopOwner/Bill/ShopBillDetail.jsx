@@ -29,16 +29,43 @@ const ShopBillDetail = () => {
     load();
   }, [auth?.token, billId]);
 
+  // Calculate totals (prefer server-calculated fields when available)
   const subTotal =
     bill?.subTotal ??
     (bill?.items || []).reduce(
       (s, it) => s + (Number(it.quantity) * Number(it.unitPrice) || 0),
       0
     );
+
   const discount = Number(bill?.discount || 0);
-  const initialGrand = Number(subTotal) - discount;
-  const remaining = Number(bill?.remaining || bill?.grandTotal || 0);
-  const paid = Math.max(0, initialGrand - remaining);
+  const computedGrand = subTotal - discount;
+
+  // Sum payments if present on the payload (may be absent for some statuses)
+  const paymentsTotal = (bill?.payments || []).reduce(
+    (sum, p) => sum + Number(p.amount || 0),
+    0
+  );
+
+  // Prefer backend-provided grandTotal/remaining to avoid mismatch when payments array isn't included
+  const grandTotal = Number(
+    bill?.grandTotal != null ? bill.grandTotal : computedGrand
+  );
+
+  // Determine remaining using reliable fallbacks
+  const status = String(bill?.status || "").toLowerCase();
+  let remaining;
+  if (bill?.remaining != null) {
+    remaining = Number(bill.remaining);
+  } else if (status === "paid") {
+    remaining = 0;
+  } else if (status === "unpaid") {
+    remaining = grandTotal;
+  } else {
+    remaining = Math.max(0, grandTotal - paymentsTotal);
+  }
+
+  // Paid derived from grand - remaining (most reliable across payload shapes)
+  const paid = Math.max(0, Number((grandTotal - remaining).toFixed(2)));
 
   return (
     <motion.div
@@ -194,7 +221,7 @@ const ShopBillDetail = () => {
                 </div>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600">Grand Total</span>
-                  <span className="font-semibold">{fmt(initialGrand)}</span>
+                  <span className="font-semibold">{fmt(grandTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600">Paid</span>
@@ -287,6 +314,87 @@ const ShopBillDetail = () => {
                 </>
               ) : (
                 <div className="text-sm text-gray-500">No items</div>
+              )}
+            </div>
+
+            {/* Payments */}
+            <div className="rounded-2xl border border-yellow-200 bg-white/80 p-4 shadow-sm">
+              <h3 className="font-semibold text-yellow-800 mb-2">Payments</h3>
+              {bill.payments?.length ? (
+                <>
+                  {/* Desktop/tablet table */}
+                  <div className="overflow-x-auto hidden md:block">
+                    <table className="w-full text-sm border border-yellow-200 rounded-xl overflow-hidden">
+                      <thead className="bg-yellow-50 text-yellow-800">
+                        <tr>
+                          <th className="text-left p-3">Date</th>
+                          <th className="text-left p-3">Method</th>
+                          <th className="text-right p-3">Amount</th>
+                          <th className="text-left p-3">Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bill.payments.map((p, idx) => (
+                          <tr key={idx} className="border-t border-yellow-100">
+                            <td className="p-3">
+                              {String(p.date).slice(0, 10)}
+                            </td>
+                            <td className="p-3 capitalize">{p.method}</td>
+                            <td className="p-3 text-right font-semibold text-emerald-700">
+                              {fmt(p.amount)}
+                            </td>
+                            <td className="p-3 text-gray-700">
+                              {p.note ||
+                                (p.method === "cheque" && p.chequeNumber
+                                  ? `Cheque #${p.chequeNumber}`
+                                  : "-")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile stacked list */}
+                  <div className="space-y-3 md:hidden">
+                    {bill.payments.map((p, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-yellow-200 bg-white/70 p-3"
+                      >
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600">Date</span>
+                          <span className="font-medium">
+                            {String(p.date).slice(0, 10)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Method</span>
+                          <span className="font-medium capitalize">
+                            {p.method}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Amount</span>
+                          <span className="font-semibold text-emerald-700">
+                            {fmt(p.amount)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Note</span>
+                          <span className="font-medium">
+                            {p.note ||
+                              (p.method === "cheque" && p.chequeNumber
+                                ? `Cheque #${p.chequeNumber}`
+                                : "-")}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-gray-500">No payments</div>
               )}
             </div>
 

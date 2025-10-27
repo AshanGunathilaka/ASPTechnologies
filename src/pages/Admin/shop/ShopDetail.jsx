@@ -32,6 +32,9 @@ export default function ShopDetail() {
   const [paidTotals, setPaidTotals] = useState({}); // billId -> sum(amount)
   const [billFilter, setBillFilter] = useState("all"); // all | paid | unpaid
 
+  // number formatter like ShopBills
+  const numberFmt = (n) => Number(n || 0).toLocaleString();
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -136,6 +139,60 @@ export default function ShopDetail() {
       </div>
     );
 
+  // Build derived bill data with payments and status
+  const derivedBills = (bills || []).map((bill) => {
+    const subtotal = (bill.items || []).reduce(
+      (s, it) => s + (Number(it.quantity) * Number(it.unitPrice) || 0),
+      0
+    );
+    const originalGrand = subtotal - Number(bill.discount || 0);
+    const totalPaid = Number((paidTotals[bill._id] || 0).toFixed(2));
+    const remaining = Number((originalGrand - totalPaid).toFixed(2));
+    const isPaid = remaining <= 0;
+
+    const creditDays = Number(bill.creditPeriodDays || 0);
+    const billDate = new Date(bill.date);
+    const daysSince = Math.floor(
+      (new Date().setHours(0, 0, 0, 0) - billDate.setHours(0, 0, 0, 0)) /
+        (1000 * 60 * 60 * 24)
+    );
+    const remainingDays = creditDays - (isNaN(daysSince) ? 0 : daysSince);
+
+    return {
+      bill,
+      originalGrand,
+      totalPaid,
+      remaining,
+      isPaid,
+      creditDays,
+      remainingDays,
+    };
+  });
+
+  // Apply current filter
+  const filteredBills = derivedBills.filter((x) =>
+    billFilter === "all" ? true : billFilter === "paid" ? x.isPaid : !x.isPaid
+  );
+
+  // Summary totals and status counts (like ShopBills)
+  const totals = filteredBills.reduce(
+    (acc, x) => ({
+      grand: acc.grand + Number(x.originalGrand || 0),
+      remaining: acc.remaining + Math.max(0, Number(x.remaining || 0)),
+    }),
+    { grand: 0, remaining: 0 }
+  );
+
+  const statusCounts = filteredBills.reduce(
+    (acc, x) => {
+      if (x.isPaid) acc.paid += 1;
+      else if (Number(x.totalPaid || 0) > 0) acc.partial += 1;
+      else acc.unpaid += 1;
+      return acc;
+    },
+    { paid: 0, partial: 0, unpaid: 0 }
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -229,6 +286,60 @@ export default function ShopDetail() {
         )}
       </motion.div>
 
+      {/* Summary (like ShopBills) */}
+      {(bills || []).length > 0 && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+              <div className="text-xs text-gray-500">Bills</div>
+              <div className="mt-1 text-xl font-semibold text-yellow-800">
+                {filteredBills.length}
+              </div>
+            </div>
+            <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+              <div className="text-xs text-gray-500">Total</div>
+              <div className="mt-1 text-xl font-semibold text-yellow-800">
+                Rs. {numberFmt(totals.grand)}
+              </div>
+            </div>
+            <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+              <div className="text-xs text-gray-500">Outstanding</div>
+              <div className="mt-1 text-xl font-semibold text-rose-700">
+                Rs. {numberFmt(totals.remaining)}
+              </div>
+            </div>
+            <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+              <div className="text-xs text-gray-500">Cleared</div>
+              <div className="mt-1 text-xl font-semibold text-emerald-700">
+                Rs. {numberFmt(totals.grand - totals.remaining)}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick status snapshot */}
+          <div className="grid grid-cols-3 gap-3 mb-2">
+            <div className="rounded-2xl p-3 shadow-sm border border-emerald-200 bg-emerald-50/60 text-center">
+              <div className="text-xs text-emerald-700">Paid</div>
+              <div className="text-lg font-semibold text-emerald-800">
+                {statusCounts.paid}
+              </div>
+            </div>
+            <div className="rounded-2xl p-3 shadow-sm border border-amber-200 bg-amber-50/60 text-center">
+              <div className="text-xs text-amber-700">Partial</div>
+              <div className="text-lg font-semibold text-amber-800">
+                {statusCounts.partial}
+              </div>
+            </div>
+            <div className="rounded-2xl p-3 shadow-sm border border-gray-200 bg-gray-50/60 text-center">
+              <div className="text-xs text-gray-700">Unpaid</div>
+              <div className="text-lg font-semibold text-gray-800">
+                {statusCounts.unpaid}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Bills Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <motion.h3
@@ -291,132 +402,96 @@ export default function ShopDetail() {
         >
           No bills available for this shop 😔
         </motion.p>
+      ) : filteredBills.length === 0 ? (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-gray-600 text-center mt-10"
+        >
+          No {billFilter} bills match your filter.
+        </motion.p>
       ) : (
-        (() => {
-          // derive filtered bills by payment status
-          const filteredBills = (bills || []).filter((bill) => {
-            if (billFilter === "all") return true;
-            const subtotal = (bill.items || []).reduce(
-              (s, it) => s + (Number(it.quantity) * Number(it.unitPrice) || 0),
-              0
-            );
-            const originalGrand = subtotal - Number(bill.discount || 0);
-            const totalPaid = paidTotals[bill._id] || 0;
-            const remaining = Number((originalGrand - totalPaid).toFixed(2));
-            const isPaid = remaining <= 0;
-            return billFilter === "paid" ? isPaid : !isPaid;
-          });
-
-          if (filteredBills.length === 0) {
+        <motion.div
+          layout
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4"
+        >
+          {filteredBills.map((x, index) => {
+            const {
+              bill,
+              originalGrand,
+              totalPaid,
+              remaining,
+              creditDays,
+              remainingDays,
+              isPaid,
+            } = x;
             return (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-gray-600 text-center mt-10"
+              <motion.div
+                key={bill._id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl shadow-lg hover:shadow-xl transition-all border border-yellow-200"
               >
-                No {billFilter} bills match your filter.
-              </motion.p>
-            );
-          }
-
-          return (
-            <motion.div
-              layout
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4"
-            >
-              {filteredBills.map((bill, index) => {
-                const subtotal = (bill.items || []).reduce(
-                  (s, it) =>
-                    s + (Number(it.quantity) * Number(it.unitPrice) || 0),
-                  0
-                );
-                const originalGrand = subtotal - Number(bill.discount || 0);
-                const totalPaid = paidTotals[bill._id] || 0;
-                const remaining = Number(
-                  (originalGrand - totalPaid).toFixed(2)
-                );
-                const isPaid = remaining <= 0;
-
-                // credit days remaining
-                const creditDays = Number(bill.creditPeriodDays || 0);
-                const billDate = new Date(bill.date);
-                const daysSince = Math.floor(
-                  (new Date().setHours(0, 0, 0, 0) -
-                    billDate.setHours(0, 0, 0, 0)) /
-                    (1000 * 60 * 60 * 24)
-                );
-                const remainingDays =
-                  creditDays - (isNaN(daysSince) ? 0 : daysSince);
-
-                return (
-                  <motion.div
-                    key={bill._id}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl shadow-lg hover:shadow-xl transition-all border border-yellow-200"
+                <h4 className="text-lg font-semibold text-amber-700">
+                  Bill #{bill.number}
+                </h4>
+                <p className="text-gray-600 text-sm">
+                  Date: {new Date(bill.date).toLocaleDateString()}
+                </p>
+                <p className="text-gray-700 mt-2">
+                  💰 Grand Total:{" "}
+                  <span className="font-semibold text-amber-600">
+                    {originalGrand.toFixed(2)}
+                  </span>
+                </p>
+                <p className="text-gray-700">
+                  Paid: {totalPaid.toFixed(2)} | Remaining:{" "}
+                  {remaining.toFixed(2)}
+                </p>
+                <p className="text-gray-700">
+                  Credit Days: {creditDays} | Remaining Days:{" "}
+                  <span
+                    className={
+                      remainingDays < 0 ? "text-red-600 font-semibold" : ""
+                    }
                   >
-                    <h4 className="text-lg font-semibold text-amber-700">
-                      Bill #{bill.number}
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      Date: {new Date(bill.date).toLocaleDateString()}
-                    </p>
-                    <p className="text-gray-700 mt-2">
-                      💰 Grand Total:{" "}
-                      <span className="font-semibold text-amber-600">
-                        {originalGrand.toFixed(2)}
-                      </span>
-                    </p>
-                    <p className="text-gray-700">
-                      Paid: {totalPaid.toFixed(2)} | Remaining:{" "}
-                      {remaining.toFixed(2)}
-                    </p>
-                    <p className="text-gray-700">
-                      Credit Days: {creditDays} | Remaining Days:{" "}
-                      <span
-                        className={
-                          remainingDays < 0 ? "text-red-600 font-semibold" : ""
-                        }
-                      >
-                        {remainingDays}
-                      </span>
-                    </p>
-                    <p className="mt-1">
-                      Status:{" "}
-                      <span
-                        className={
-                          isPaid
-                            ? "text-green-600 font-semibold"
-                            : "text-red-600 font-semibold"
-                        }
-                      >
-                        {isPaid ? "Payment Completed" : "Not Paid"}
-                      </span>
-                    </p>
+                    {remainingDays}
+                  </span>
+                </p>
+                <p className="mt-1">
+                  Status:{" "}
+                  <span
+                    className={
+                      isPaid
+                        ? "text-green-600 font-semibold"
+                        : "text-red-600 font-semibold"
+                    }
+                  >
+                    {isPaid ? "Payment Completed" : "Not Paid"}
+                  </span>
+                </p>
 
-                    <div className="mt-4 flex gap-3">
-                      <button
-                        onClick={() =>
-                          navigate(`/admin/shops/${shopId}/bills/${bill._id}`)
-                        }
-                        className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-all shadow-sm"
-                      >
-                        Open
-                      </button>
-                      <button
-                        onClick={() => handleDeleteBill(bill._id)}
-                        className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-all shadow-sm"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          );
-        })()
+                <div className="mt-4 flex gap-3">
+                  <button
+                    onClick={() =>
+                      navigate(`/admin/shops/${shopId}/bills/${bill._id}`)
+                    }
+                    className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-all shadow-sm"
+                  >
+                    Open
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBill(bill._id)}
+                    className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-all shadow-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       )}
     </motion.div>
   );

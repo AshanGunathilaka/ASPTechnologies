@@ -11,9 +11,11 @@ const ShopLayout = () => {
 
   const shop = auth?.shop || {};
   const shopName = shop?.name || "Shop";
+
   // Company brand logo for sidebar only
   const companyLogo = "/Logo.svg";
-  // Logged-in shop's logo for topbars (no fallback to company logo)
+
+  // Logged-in shop's logo for topbars
   const shopLogoSrc =
     (shop?.logo && (shop.logo.url || shop.logo.secure_url)) ||
     shop?.logoUrl ||
@@ -41,14 +43,19 @@ const ShopLayout = () => {
         } lg:translate-x-0`}
       >
         {/* Brand */}
-        <div className="flex items-center gap-3 p-4 border-b border-white/20 sticky top-0 bg-gradient-to-b from-slate-600 to-blue-700 z-50">
-          <img
-            src={companyLogo}
-            alt="Company Logo"
-            className="h-9 w-9 rounded-full object-cover border border-yellow-300 shadow-sm"
-            onError={(e) => (e.currentTarget.src = "/Logo.svg")}
-          />
-          <div className="font-bold text-lg truncate">ASP Technologies</div>
+        {/* Brand */}
+        <div className="flex flex-col items-center justify-center p-6 border-b border-white/20 bg-gradient-to-b from-slate-600 to-blue-700 sticky top-0 z-50">
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-300 shadow-md flex items-center justify-center bg-black">
+            <img
+              src={companyLogo}
+              alt="Company Logo"
+              className="w-full h-full object-cover"
+              onError={(e) => (e.currentTarget.src = "/Logo.svg")}
+            />
+          </div>
+          <div className="font-bold text-lg text-white mt-3 text-center">
+            ASP Technologies
+          </div>
         </div>
 
         {/* Menu */}
@@ -72,7 +79,7 @@ const ShopLayout = () => {
         </nav>
       </aside>
 
-      {/* Mobile topbar */}
+      {/* Mobile Topbar */}
       <div className="lg:hidden fixed top-0 inset-x-0 flex items-center justify-between bg-gradient-to-r from-blue-700 to-slate-600 text-white px-4 py-3 z-40 shadow-md">
         <div className="flex items-center gap-3">
           <button
@@ -84,12 +91,14 @@ const ShopLayout = () => {
           </button>
           <div className="flex items-center gap-2">
             {shopLogoSrc ? (
-              <img
-                src={shopLogoSrc}
-                alt={`${shopName} Logo`}
-                className="h-8 w-8 rounded-full object-cover border border-yellow-300 shadow-sm"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-yellow-300 shadow-sm bg-white flex items-center justify-center">
+                <img
+                  src={shopLogoSrc}
+                  alt={`${shopName} Logo`}
+                  className="h-16 w-2 rounded-full object-cover border border-yellow-300 shadow-sm"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
+              </div>
             ) : null}
             <span className="font-semibold text-yellow-200">{shopName}</span>
           </div>
@@ -111,7 +120,7 @@ const ShopLayout = () => {
               <img
                 src={shopLogoSrc}
                 alt={`${shopName} Logo`}
-                className="h-9 w-9 rounded-full object-cover border border-yellow-300 shadow-sm"
+                className="h-12 w-13 rounded-full object-cover border border-yellow-300 shadow-sm"
                 onError={(e) => (e.currentTarget.style.display = "none")}
               />
             ) : null}

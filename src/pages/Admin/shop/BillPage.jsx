@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { fetchBill, updateBill, createBill } from "../../../api/shops";
+import {
+  fetchBill,
+  fetchBillPayments,
+  updateBill,
+  createBill,
+} from "../../../api/shops";
 import BillForm from "../../../components/Admin/shop/BillForm";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
@@ -17,14 +22,20 @@ export default function BillPage() {
   const navigate = useNavigate();
 
   const [bill, setBill] = useState(null);
+  const [payments, setPayments] = useState([]);
   const [mode, setMode] = useState(billId ? "view" : "create");
 
   useEffect(() => {
     const loadBill = async () => {
       try {
         if (billId) {
-          const res = await fetchBill(token, shopId, billId);
+          // fetch bill and payments in parallel
+          const [res, paymentsRes] = await Promise.all([
+            fetchBill(token, shopId, billId),
+            fetchBillPayments(token, shopId, billId),
+          ]);
           setBill(res.data);
+          setPayments(paymentsRes.data || []);
         }
       } catch (err) {
         console.error(err);
@@ -69,24 +80,40 @@ export default function BillPage() {
       </div>
     );
 
-  // Compute totals similar to InvoicePage view
+  // Compute totals from bill items/discount and payments
   const computedSubtotal = (bill?.items || []).reduce(
     (s, it) => s + (Number(it.quantity) * Number(it.unitPrice) || 0),
     0
   );
-  const computedGrand = computedSubtotal - Number(bill?.discount || 0);
 
-  // Prefer persisted values when available
+  // Prefer persisted values when available for displayed sub total and discount
   const subTotal =
     bill?.subTotal !== undefined ? Number(bill.subTotal) : computedSubtotal;
   const discount = Number(bill?.discount || 0);
-  const grandTotal =
-    bill?.grandTotal !== undefined ? Number(bill.grandTotal) : computedGrand;
-  const initialGrand = subTotal - discount;
-  const paidAmount = Math.max(0, (initialGrand || 0) - (grandTotal || 0));
-  const remainingAmount = Math.max(0, grandTotal || 0);
+  const originalGrand = subTotal - discount;
+
+  const totalPaid = payments.reduce((a, p) => a + Number(p.amount || 0), 0);
+  const remainingBalance = Math.max(
+    0,
+    Number((originalGrand - totalPaid).toFixed(2))
+  );
+
+  // Derive status (align with ShopBills and other pages)
+  const billStatus =
+    remainingBalance <= 0
+      ? "paid"
+      : totalPaid > 0
+      ? "partially paid"
+      : "unpaid";
+
+  const statusCounts = {
+    paid: billStatus === "paid" ? 1 : 0,
+    partial: billStatus === "partially paid" ? 1 : 0,
+    unpaid: billStatus === "unpaid" ? 1 : 0,
+  };
 
   const fmt = (n) => Number(n || 0).toFixed(2);
+  const numberFmt = (n) => Number(n || 0).toLocaleString();
 
   return (
     <motion.div
@@ -133,6 +160,56 @@ export default function BillPage() {
             animate={{ opacity: 1 }}
             className="space-y-4"
           >
+            {/* Summary (like ShopBills) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+                <div className="text-xs text-gray-500">Bills</div>
+                <div className="mt-1 text-xl font-semibold text-yellow-800">
+                  1
+                </div>
+              </div>
+              <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+                <div className="text-xs text-gray-500">Total</div>
+                <div className="mt-1 text-xl font-semibold text-yellow-800">
+                  Rs. {numberFmt(originalGrand)}
+                </div>
+              </div>
+              <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+                <div className="text-xs text-gray-500">Outstanding</div>
+                <div className="mt-1 text-xl font-semibold text-rose-700">
+                  Rs. {numberFmt(remainingBalance)}
+                </div>
+              </div>
+              <div className="rounded-2xl p-4 shadow-sm border border-yellow-200 bg-white/80">
+                <div className="text-xs text-gray-500">Cleared</div>
+                <div className="mt-1 text-xl font-semibold text-emerald-700">
+                  Rs. {numberFmt(originalGrand - remainingBalance)}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick status snapshot */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl p-3 shadow-sm border border-emerald-200 bg-emerald-50/60 text-center">
+                <div className="text-xs text-emerald-700">Paid</div>
+                <div className="text-lg font-semibold text-emerald-800">
+                  {statusCounts.paid}
+                </div>
+              </div>
+              <div className="rounded-2xl p-3 shadow-sm border border-amber-200 bg-amber-50/60 text-center">
+                <div className="text-xs text-amber-700">Partial</div>
+                <div className="text-lg font-semibold text-amber-800">
+                  {statusCounts.partial}
+                </div>
+              </div>
+              <div className="rounded-2xl p-3 shadow-sm border border-gray-200 bg-gray-50/60 text-center">
+                <div className="text-xs text-gray-700">Unpaid</div>
+                <div className="text-lg font-semibold text-gray-800">
+                  {statusCounts.unpaid}
+                </div>
+              </div>
+            </div>
+
             {/* Overview */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="p-4 bg-yellow-50 rounded-xl shadow-sm border border-yellow-200">
@@ -197,18 +274,18 @@ export default function BillPage() {
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-semibold">Grand Total</span>
-                  <span className="font-semibold">{fmt(initialGrand)}</span>
+                  <span className="font-semibold">{fmt(originalGrand)}</span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-semibold">Paid</span>
                   <span className="text-green-600 font-semibold">
-                    {fmt(paidAmount)}
+                    {fmt(totalPaid)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Remaining</span>
                   <span className="text-amber-600 font-semibold">
-                    {fmt(remainingAmount)}
+                    {fmt(remainingBalance)}
                   </span>
                 </div>
               </div>
