@@ -115,9 +115,7 @@ const ShopOffers = () => {
                       {o.startDate ? String(o.startDate).slice(0, 10) : "-"} →{" "}
                       {o.endDate ? String(o.endDate).slice(0, 10) : "-"}
                     </div>
-                    <p className="text-gray-600 text-sm mt-2 line-clamp-3">
-                      {o.description || ""}
-                    </p>
+
                     <div className="mt-4 flex items-center gap-2">
                       <button
                         onClick={() => navigate(`/shop/offers/${o._id}`)}

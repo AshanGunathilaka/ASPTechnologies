@@ -13,7 +13,7 @@ const ShopItems = () => {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState("all");
 
   const categories = [
     { value: "all", label: "All" },
@@ -42,11 +42,46 @@ const ShopItems = () => {
     load();
   }, [load]);
 
+  // Reset brand selection when category changes
+  useEffect(() => {
+    setSelectedBrand("all");
+  }, [category]);
+
+  // Extract first word from item name as brand
+  const extractBrand = useCallback((name) => {
+    if (!name || typeof name !== "string") return "Unknown";
+    const first = name.trim().split(/\s+/)[0];
+    if (!first) return "Unknown";
+    // Normalize casing: capitalize first letter, rest lower
+    return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+  }, []);
+
+  // Build brand options for current list (works after API filter by category)
+  const brandOptions = useMemo(() => {
+    if (!(category === "mobile" || category === "smartphone")) return [];
+    const set = new Set();
+    (items || []).forEach((it) => {
+      const b = extractBrand(it?.name);
+      if (b) set.add(b);
+    });
+    return Array.from(set).sort();
+  }, [items, category, extractBrand]);
+
   // Client-side search filter (mobile search)
   const displayItems = useMemo(() => {
-    if (!query.trim()) return items;
+    let list = items;
+    // Apply brand filter for mobile/smartphone
+    if (
+      (category === "mobile" || category === "smartphone") &&
+      selectedBrand &&
+      selectedBrand !== "all"
+    ) {
+      list = list.filter((it) => extractBrand(it?.name) === selectedBrand);
+    }
+
+    if (!query.trim()) return list;
     const q = query.trim().toLowerCase();
-    return items.filter(
+    return list.filter(
       (it) =>
         String(it.name || "")
           .toLowerCase()
@@ -55,7 +90,7 @@ const ShopItems = () => {
           .toLowerCase()
           .includes(q)
     );
-  }, [items, query]);
+  }, [items, category, selectedBrand, query, extractBrand]);
 
   return (
     <motion.div
@@ -115,16 +150,18 @@ const ShopItems = () => {
           </div>
         </div>
 
-        {/* Mobile: category pills + search button */}
+        {/* Mobile: category pills + search + brand tabs */}
         <div className="sm:hidden mb-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          {/* Mobile: category pills + search bar (two-row layout) */}
+          <div className="sm:hidden mb-4 space-y-2">
+            {/* Row 1: Categories */}
+            <div className="flex flex-wrap justify-center gap-2">
               {categories.map((c) => (
                 <button
                   key={c.value}
                   type="button"
                   onClick={() => setCategory(c.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-full text-sm border ${
                     category === c.value
                       ? "bg-yellow-600 text-white border-yellow-600"
                       : "bg-white text-gray-700 border-yellow-200"
@@ -134,38 +171,98 @@ const ShopItems = () => {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowMobileSearch((v) => !v)}
-              aria-label="Toggle search"
-              className="shrink-0 p-2 rounded-xl bg-white border border-yellow-200 text-gray-700"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-5 h-5"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.5 3.75a6.75 6.75 0 104.243 11.957l4.775 4.775a.75.75 0 101.06-1.06l-4.775-4.775A6.75 6.75 0 0010.5 3.75zm-5.25 6.75a5.25 5.25 0 1110.5 0 5.25 5.25 0 01-10.5 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </div>
-          {showMobileSearch && (
-            <div className="mt-2">
+
+            {/* Row 2: Search bar */}
+            <div className="flex items-center gap-2">
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search items..."
-                className="w-full border border-yellow-200 rounded-xl px-4 py-2 bg-white/90 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="flex-1 border border-yellow-200 rounded-xl px-4 py-2 bg-white/90 focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="p-2 bg-yellow-500 text-white rounded-xl"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-          )}
+
+            {/* Row 3: Brand tabs (only for Mobile/Smartphone) */}
+            {(category === "mobile" || category === "smartphone") && (
+              <div className="pt-1">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBrand("all")}
+                    className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
+                      selectedBrand === "all"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-white text-gray-700 border-yellow-200"
+                    }`}
+                  >
+                    All brands
+                  </button>
+                  {brandOptions.map((b) => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setSelectedBrand(b)}
+                      className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
+                        selectedBrand === b
+                          ? "bg-amber-600 text-white border-amber-600"
+                          : "bg-white text-gray-700 border-yellow-200"
+                      }`}
+                      title={b}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Desktop: brand tabs under desktop category select */}
+        {(category === "mobile" || category === "smartphone") && (
+          <div className="hidden sm:block mb-3">
+            <div className="bg-white/80 border border-yellow-200 rounded-xl p-2 flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-600 mr-1">Brands</span>
+              <button
+                type="button"
+                onClick={() => setSelectedBrand("all")}
+                className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
+                  selectedBrand === "all"
+                    ? "bg-amber-600 text-white border-amber-600"
+                    : "bg-white text-gray-700 border-yellow-200"
+                }`}
+              >
+                All brands
+              </button>
+              {brandOptions.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setSelectedBrand(b)}
+                  className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
+                    selectedBrand === b
+                      ? "bg-amber-600 text-white border-amber-600"
+                      : "bg-white text-gray-700 border-yellow-200"
+                  }`}
+                  title={b}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Items grid */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-yellow-200 p-4 sm:p-5">

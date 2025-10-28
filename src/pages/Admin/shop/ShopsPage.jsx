@@ -284,14 +284,16 @@ export default function ShopsPage() {
             >
               {/* Logo */}
               {(s.logoUrl || (s.logo && s.logo.url) || s.logo) && (
-                <div className="mb-3">
+                <div className="mb-3 flex justify-center">
                   <img
                     src={s.logoUrl || (s.logo && s.logo.url) || s.logo}
                     alt={`${s.name || "Shop"} Logo`}
-                    className="w-16 h-16 object-cover rounded-full border border-yellow-200 shadow-sm"
+                    className="w-32 h-36 sm:w-16 sm:h-16 object-cover rounded-full border-2 border-yellow-300 shadow-md scale-[0.9]"
+                    style={{ transformOrigin: "center" }}
                   />
                 </div>
               )}
+
               <motion.h3
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

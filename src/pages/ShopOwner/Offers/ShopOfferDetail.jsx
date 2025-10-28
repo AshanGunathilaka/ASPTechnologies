@@ -66,7 +66,7 @@ export default function ShopOfferDetail() {
             <button
               type="button"
               onClick={() => navigate(`/shop/offers`)}
-              className="px-4 py-2 rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+              className="px-4 py-2 rounded-xl bg-yellow-400 text-white border border-gray-200 hover:bg-gray-100"
             >
               Back
             </button>
@@ -84,8 +84,8 @@ export default function ShopOfferDetail() {
                 <span
                   className={`px-2 py-0.5 rounded-full text-xs border ${
                     offer.status === "active"
-                      ? "bg-green-50 text-green-700 border-green-200"
-                      : "bg-gray-50 text-gray-700 border-gray-200"
+                      ? "bg-green-50 text-green-700 border-green-200 uppercase"
+                      : "bg-gray-50 text-gray-700 border-gray-200 uppercase"
                   }`}
                 >
                   {offer.status}
@@ -130,27 +130,28 @@ export default function ShopOfferDetail() {
                 {offer.items.map((item) => (
                   <div
                     key={item._id || item}
-                    className="flex items-center gap-2 p-2 rounded-xl border border-yellow-100 bg-white/60"
+                    className="flex flex-col items-center p-2 rounded-xl border border-yellow-100 bg-white/60"
                   >
+                    {/* Item Image */}
                     {item.image ? (
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-12 h-12 object-cover rounded"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded mb-2"
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-gray-100 rounded" />
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded mb-2" />
                     )}
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">
-                        {item.name || item}
-                      </div>
+
+                    {/* Item Name */}
+                    <div className="text-center font-medium text-sm truncate">
+                      {item.name || item}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-gray-500">No items</div>
+              <p className="text-gray-500 text-sm">No items available.</p>
             )}
           </div>
 
