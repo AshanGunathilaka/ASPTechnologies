@@ -14,6 +14,10 @@ const ShopItems = () => {
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
+  const hasBrandTabs = useMemo(
+    () => ["mobile", "smartphone", "display", "accessories"].includes(category),
+    [category]
+  );
 
   const categories = [
     { value: "all", label: "All" },
@@ -58,24 +62,20 @@ const ShopItems = () => {
 
   // Build brand options for current list (works after API filter by category)
   const brandOptions = useMemo(() => {
-    if (!(category === "mobile" || category === "smartphone")) return [];
+    if (!hasBrandTabs) return [];
     const set = new Set();
     (items || []).forEach((it) => {
       const b = extractBrand(it?.name);
-      if (b) set.add(b);
+      if (b && b !== "Unknown") set.add(b);
     });
     return Array.from(set).sort();
-  }, [items, category, extractBrand]);
+  }, [items, hasBrandTabs, extractBrand]);
 
   // Client-side search filter (mobile search)
   const displayItems = useMemo(() => {
     let list = items;
     // Apply brand filter for mobile/smartphone
-    if (
-      (category === "mobile" || category === "smartphone") &&
-      selectedBrand &&
-      selectedBrand !== "all"
-    ) {
+    if (hasBrandTabs && selectedBrand && selectedBrand !== "all") {
       list = list.filter((it) => extractBrand(it?.name) === selectedBrand);
     }
 
@@ -90,7 +90,7 @@ const ShopItems = () => {
           .toLowerCase()
           .includes(q)
     );
-  }, [items, category, selectedBrand, query, extractBrand]);
+  }, [items, hasBrandTabs, selectedBrand, query, extractBrand]);
 
   return (
     <motion.div
@@ -193,73 +193,56 @@ const ShopItems = () => {
               )}
             </div>
 
-            {/* Row 3: Brand tabs (only for Mobile/Smartphone) */}
-            {(category === "mobile" || category === "smartphone") && (
-              <div className="pt-1">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBrand("all")}
-                    className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
-                      selectedBrand === "all"
-                        ? "bg-amber-600 text-white border-amber-600"
-                        : "bg-white text-gray-700 border-yellow-200"
-                    }`}
-                  >
-                    All brands
-                  </button>
-                  {brandOptions.map((b) => (
-                    <button
-                      key={b}
-                      type="button"
-                      onClick={() => setSelectedBrand(b)}
-                      className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
-                        selectedBrand === b
-                          ? "bg-amber-600 text-white border-amber-600"
-                          : "bg-white text-gray-700 border-yellow-200"
-                      }`}
-                      title={b}
-                    >
-                      {b}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Row 3: Brand tabs removed (deduplicated; unified bar below) */}
           </div>
         </div>
 
-        {/* Desktop: brand tabs under desktop category select */}
-        {(category === "mobile" || category === "smartphone") && (
-          <div className="hidden sm:block mb-3">
-            <div className="bg-white/80 border border-yellow-200 rounded-xl p-2 flex flex-wrap items-center gap-2">
-              <span className="text-sm text-gray-600 mr-1">Brands</span>
-              <button
-                type="button"
-                onClick={() => setSelectedBrand("all")}
-                className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
-                  selectedBrand === "all"
-                    ? "bg-amber-600 text-white border-amber-600"
-                    : "bg-white text-gray-700 border-yellow-200"
-                }`}
-              >
-                All brands
-              </button>
-              {brandOptions.map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  onClick={() => setSelectedBrand(b)}
-                  className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap ${
-                    selectedBrand === b
-                      ? "bg-amber-600 text-white border-amber-600"
-                      : "bg-white text-gray-700 border-yellow-200"
-                  }`}
-                  title={b}
-                >
-                  {b}
-                </button>
-              ))}
+        {/* Brand buttons grid: rows of 4 (includes 'All brands') */}
+        {hasBrandTabs && (
+          <div className="mb-3">
+            <div className="bg-white/80 border border-yellow-200 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600 mr-1 font-medium">
+                  Brands
+                </span>
+                {selectedBrand !== "all" && (
+                  <span className="text-xs text-gray-600">
+                    {displayItems.length}{" "}
+                    {displayItems.length === 1 ? "item" : "items"}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {(() => {
+                  const brands = ["all", ...brandOptions];
+                  const rows = [];
+                  for (let i = 0; i < brands.length; i += 4) {
+                    rows.push(brands.slice(i, i + 4));
+                  }
+                  return rows.map((row, rowIndex) => (
+                    <div key={rowIndex} className="flex flex-wrap gap-2">
+                      {row.map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() =>
+                            setSelectedBrand(b === "all" ? "all" : b)
+                          }
+                          className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-all duration-200 ${
+                            selectedBrand === b ||
+                            (b === "all" && selectedBrand === "all")
+                              ? "bg-amber-600 text-white border-amber-600"
+                              : "bg-white text-gray-700 border-yellow-200 hover:bg-amber-50"
+                          }`}
+                          title={b === "all" ? undefined : b}
+                        >
+                          {b === "all" ? "All brands" : b}
+                        </button>
+                      ))}
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
           </div>
         )}
