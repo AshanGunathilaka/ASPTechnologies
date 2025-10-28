@@ -273,11 +273,11 @@ const ShopItems = () => {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-6 mx-4 sm:mx-2">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-2">
               {displayItems.map((item) => (
                 <div
                   key={item._id}
-                  className="border border-yellow-200 rounded-xl overflow-hidden shadow-sm bg-gradient-to-br from-green-400 to-blue-400 hover:shadow-lg transition-all duration-300"
+                  className="border border-yellow-200 rounded-xl overflow-hidden shadow-sm bg-gradient-to-br from-gray--400 to-gray-700 hover:shadow-lg transition-all duration-300"
                 >
                   <button
                     type="button"
@@ -304,7 +304,11 @@ const ShopItems = () => {
                         onClick={() => navigate(`/shop/items/${item._id}`)}
                         className="relative group text-left font-semibold transition-all duration-300"
                       >
-                        <span className="relative inline-block px-4 py-1.5 rounded-full bg-black text-white shadow-md transition-all duration-500 group-hover:scale-105 group-hover:shadow-lg group-hover:brightness-110">
+                        <span
+                          className="relative inline-block px-4 py-1.5 rounded-2xl border border-amber-400 bg-gradient-to-r from-yellow-600 to-yellow-500
+             text-white font-bold tracking-wide shadow-sm
+             transition-all duration-500 group-hover:scale-105 group-hover:shadow-md group-hover:brightness-110"
+                        >
                           {item.name}
                         </span>
                       </button>
