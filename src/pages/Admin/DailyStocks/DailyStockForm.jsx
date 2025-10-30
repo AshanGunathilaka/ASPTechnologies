@@ -26,6 +26,7 @@ export default function DailyStockForm() {
     items: [
       {
         itemId: "",
+        itemName: "",
         broughtOutQty: "",
         soldQty: "",
         actualRemaining: "",
@@ -50,6 +51,7 @@ export default function DailyStockForm() {
             );
             return {
               itemId: matched?._id || "",
+              itemName: i.productName || matched?.name || "",
               broughtOutQty: i.startingQty,
               soldQty: i.soldQty,
               actualRemaining: i.actualRemainingQty,
@@ -78,6 +80,10 @@ export default function DailyStockForm() {
     const { name, value } = e.target;
     const updatedItems = [...formData.items];
     updatedItems[index][name] = value;
+    // Clear stale itemId when user types a custom name
+    if (name === "itemName") {
+      updatedItems[index].itemId = "";
+    }
     setFormData({ ...formData, items: updatedItems });
   };
 
@@ -86,7 +92,13 @@ export default function DailyStockForm() {
       ...formData,
       items: [
         ...formData.items,
-        { itemId: "", broughtOutQty: "", soldQty: "", actualRemaining: "" },
+        {
+          itemId: "",
+          itemName: "",
+          broughtOutQty: "",
+          soldQty: "",
+          actualRemaining: "",
+        },
       ],
     });
   };
@@ -105,7 +117,8 @@ export default function DailyStockForm() {
         date: formData.date,
         note: formData.note,
         items: formData.items.map((i) => ({
-          productName: items.find((x) => x._id === i.itemId)?.name || "",
+          productName:
+            items.find((x) => x._id === i.itemId)?.name || i.itemName || "",
           startingQty: Number(i.broughtOutQty),
           soldQty: Number(i.soldQty),
           actualRemainingQty: Number(i.actualRemaining),
@@ -221,22 +234,45 @@ export default function DailyStockForm() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium">Select Item</label>
-                <select
-                  name="itemId"
-                  value={item.itemId}
+              <div className="relative">
+                <label className="block text-sm font-medium">Item</label>
+                <input
+                  type="text"
+                  name="itemName"
+                  value={item.itemName}
                   onChange={(e) => handleChange(e, index)}
                   className="w-full border p-2 rounded"
-                  required
-                >
-                  <option value="">Select item</option>
-                  {items.map((i) => (
-                    <option key={i._id} value={i._id}>
-                      {i.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Type item name..."
+                  autoComplete="off"
+                />
+                {/* Suggestions */}
+                {item.itemName?.trim() && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+                    {items
+                      .filter((opt) =>
+                        String(opt.name || "")
+                          .toLowerCase()
+                          .includes(item.itemName.trim().toLowerCase())
+                      )
+                      .slice(0, 8)
+                      .map((opt) => (
+                        <button
+                          key={opt._id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            const updated = [...formData.items];
+                            updated[index].itemId = opt._id;
+                            updated[index].itemName = opt.name;
+                            setFormData({ ...formData, items: updated });
+                          }}
+                          className="block w-full text-left px-3 py-2 hover:bg-yellow-50"
+                        >
+                          {opt.name}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">

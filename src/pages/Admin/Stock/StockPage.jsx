@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { toast, Toaster } from "react-hot-toast";
 import { motion } from "framer-motion";
@@ -7,6 +13,7 @@ import {
   fetchDailyStock,
   fetchMonthlyStock,
 } from "../../../api/stocks";
+import { fetchItems } from "../../../api/items";
 
 export default function StockPage() {
   // Reference for eslint when using <motion.*>
@@ -16,6 +23,11 @@ export default function StockPage() {
   const [tab, setTab] = useState("summary");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Item search + suggestions
+  const [itemQuery, setItemQuery] = useState("");
+  const [allItems, setAllItems] = useState([]);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const suggestRef = useRef(null);
 
   // Summary params
   const [from, setFrom] = useState("");
@@ -53,8 +65,37 @@ export default function StockPage() {
     load();
   }, [load]);
 
+  // Load items list once for suggestions
+  useEffect(() => {
+    const loadItems = async () => {
+      if (!token) return;
+      try {
+        const res = await fetchItems(token, { limit: 1000 });
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : res?.data?.items || [];
+        setAllItems(list);
+      } catch (e) {
+        // Non-blocking
+        setAllItems([]);
+      }
+    };
+    loadItems();
+  }, [token]);
+
+  // Filter table rows by typed item query
+  const filteredRows = useMemo(() => {
+    const q = itemQuery.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      String(r.item || "")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [rows, itemQuery]);
+
   const totals = useMemo(() => {
-    return rows.reduce(
+    return filteredRows.reduce(
       (acc, r) => {
         acc.purchased += Number(r.purchasedQty || 0);
         acc.sold += Number(r.soldQty || 0);
@@ -63,7 +104,26 @@ export default function StockPage() {
       },
       { purchased: 0, sold: 0, remaining: 0 }
     );
-  }, [rows]);
+  }, [filteredRows]);
+
+  // Suggestions derived from allItems by name
+  const suggestions = useMemo(() => {
+    const q = itemQuery.trim().toLowerCase();
+    if (!q) return [];
+    const seen = new Set();
+    const list = [];
+    for (const it of allItems) {
+      const name = String(it?.name || "");
+      if (!name) continue;
+      const lower = name.toLowerCase();
+      if (lower.includes(q) && !seen.has(lower)) {
+        seen.add(lower);
+        list.push(name);
+      }
+      if (list.length >= 8) break;
+    }
+    return list;
+  }, [allItems, itemQuery]);
 
   return (
     <motion.div
@@ -213,6 +273,53 @@ export default function StockPage() {
           </div>
         )}
 
+        {/* Item search with suggestions */}
+        <div className="mb-4 relative" ref={suggestRef}>
+          <label className="block text-xs text-gray-500 mb-1">Item</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={itemQuery}
+              onChange={(e) => {
+                setItemQuery(e.target.value);
+                setShowSuggest(true);
+              }}
+              onFocus={() => setShowSuggest(true)}
+              onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+              placeholder="Type to search items..."
+              className="flex-1 border border-yellow-200 rounded-xl p-2 bg-white/70 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            />
+            {itemQuery && (
+              <button
+                type="button"
+                onClick={() => setItemQuery("")}
+                className="px-3 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {showSuggest && suggestions.length > 0 && (
+            <div className="absolute z-10 mt-1 w-full bg-white border border-yellow-200 rounded-xl shadow max-h-64 overflow-auto">
+              {suggestions.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setItemQuery(name);
+                    setShowSuggest(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 hover:bg-yellow-50"
+                  title={name}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Table */}
         {loading ? (
           <p>Loading...</p>
@@ -228,7 +335,7 @@ export default function StockPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {filteredRows.map((r) => (
                   <tr
                     key={r.item}
                     className="border-t border-yellow-100 hover:bg-yellow-50/40"

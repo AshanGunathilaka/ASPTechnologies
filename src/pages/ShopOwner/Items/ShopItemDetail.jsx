@@ -130,7 +130,7 @@ export default function ShopItemDetail() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => navigate(`/shop/items`)}
+              onClick={() => navigate(-1)}
               className="px-4 py-2 rounded-xl font-semibold bg-yellow-400 hover:bg-gray-300 text-amber-50"
             >
               Back
